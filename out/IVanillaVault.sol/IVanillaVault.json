@@ -1,0 +1,316 @@
+{
+  "abi": [
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_tokenA",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "_tokenB",
+          "type": "address"
+        }
+      ],
+      "name": "getVaultRation",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    }
+  ],
+  "bytecode": {
+    "object": "0x",
+    "sourceMap": "",
+    "linkReferences": {}
+  },
+  "deployedBytecode": {
+    "object": "0x",
+    "sourceMap": "",
+    "linkReferences": {}
+  },
+  "methodIdentifiers": {
+    "getVaultRation(address,address)": "0b11ac7c"
+  },
+  "rawMetadata": "{\"compiler\":{\"version\":\"0.8.17+commit.8df45f5f\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_tokenA\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_tokenB\",\"type\":\"address\"}],\"name\":\"getVaultRation\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"}],\"devdoc\":{\"kind\":\"dev\",\"methods\":{},\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{},\"version\":1}},\"settings\":{\"compilationTarget\":{\"src/interfaces/IVanillaVault.sol\":\"IVanillaVault\"},\"evmVersion\":\"london\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\"},\"optimizer\":{\"enabled\":true,\"runs\":200},\"remappings\":[\":@chainlink/contracts/=lib/chainlink/contracts/\",\":@openzeppelin/=lib/openzeppelin-contracts/\",\":@uniswapV2/=lib/v2-periphery/\",\":chainlink/=lib/chainlink/contracts/src/v0.8/dev/vendor/@arbitrum/nitro-contracts/src/\",\":ds-test/=lib/forge-std/lib/ds-test/src/\",\":forge-std/=lib/forge-std/src/\",\":v2-periphery/=lib/v2-periphery/contracts/\"]},\"sources\":{\"src/interfaces/IVanillaVault.sol\":{\"keccak256\":\"0x82b2730b5969d20184e42b84092f9477dbd3f0cf10670d61cc3d63f6ac54db37\",\"license\":\"UNLICENSED\",\"urls\":[\"bzz-raw://09f43e0845b90e29fc15080a82f1c4407c7ce3127fe7374ed624a2a2c4291285\",\"dweb:/ipfs/QmRm1aUCen6NGm8Ur2M4FcfDKBVKMCSfQKp2kxJJ36b1h5\"]}},\"version\":1}",
+  "metadata": {
+    "compiler": {
+      "version": "0.8.17+commit.8df45f5f"
+    },
+    "language": "Solidity",
+    "output": {
+      "abi": [
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "_tokenA",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "_tokenB",
+              "type": "address"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function",
+          "name": "getVaultRation",
+          "outputs": [
+            {
+              "internalType": "uint256",
+              "name": "",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "",
+              "type": "uint256"
+            }
+          ]
+        }
+      ],
+      "devdoc": {
+        "kind": "dev",
+        "methods": {},
+        "version": 1
+      },
+      "userdoc": {
+        "kind": "user",
+        "methods": {},
+        "version": 1
+      }
+    },
+    "settings": {
+      "remappings": [
+        ":@chainlink/contracts/=lib/chainlink/contracts/",
+        ":@openzeppelin/=lib/openzeppelin-contracts/",
+        ":@uniswapV2/=lib/v2-periphery/",
+        ":chainlink/=lib/chainlink/contracts/src/v0.8/dev/vendor/@arbitrum/nitro-contracts/src/",
+        ":ds-test/=lib/forge-std/lib/ds-test/src/",
+        ":forge-std/=lib/forge-std/src/",
+        ":v2-periphery/=lib/v2-periphery/contracts/"
+      ],
+      "optimizer": {
+        "enabled": true,
+        "runs": 200
+      },
+      "metadata": {
+        "bytecodeHash": "ipfs"
+      },
+      "compilationTarget": {
+        "src/interfaces/IVanillaVault.sol": "IVanillaVault"
+      },
+      "libraries": {}
+    },
+    "sources": {
+      "src/interfaces/IVanillaVault.sol": {
+        "keccak256": "0x82b2730b5969d20184e42b84092f9477dbd3f0cf10670d61cc3d63f6ac54db37",
+        "urls": [
+          "bzz-raw://09f43e0845b90e29fc15080a82f1c4407c7ce3127fe7374ed624a2a2c4291285",
+          "dweb:/ipfs/QmRm1aUCen6NGm8Ur2M4FcfDKBVKMCSfQKp2kxJJ36b1h5"
+        ],
+        "license": "UNLICENSED"
+      }
+    },
+    "version": 1
+  },
+  "ast": {
+    "absolutePath": "src/interfaces/IVanillaVault.sol",
+    "id": 26288,
+    "exportedSymbols": {
+      "IVanillaVault": [
+        26287
+      ]
+    },
+    "nodeType": "SourceUnit",
+    "src": "39:182:24",
+    "nodes": [
+      {
+        "id": 26275,
+        "nodeType": "PragmaDirective",
+        "src": "39:24:24",
+        "nodes": [],
+        "literals": [
+          "solidity",
+          "^",
+          "0.8",
+          ".17"
+        ]
+      },
+      {
+        "id": 26287,
+        "nodeType": "ContractDefinition",
+        "src": "65:155:24",
+        "nodes": [
+          {
+            "id": 26286,
+            "nodeType": "FunctionDefinition",
+            "src": "95:123:24",
+            "nodes": [],
+            "functionSelector": "0b11ac7c",
+            "implemented": false,
+            "kind": "function",
+            "modifiers": [],
+            "name": "getVaultRation",
+            "nameLocation": "104:14:24",
+            "parameters": {
+              "id": 26280,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 26277,
+                  "mutability": "mutable",
+                  "name": "_tokenA",
+                  "nameLocation": "127:7:24",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 26286,
+                  "src": "119:15:24",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_address",
+                    "typeString": "address"
+                  },
+                  "typeName": {
+                    "id": 26276,
+                    "name": "address",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "119:7:24",
+                    "stateMutability": "nonpayable",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address",
+                      "typeString": "address"
+                    }
+                  },
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 26279,
+                  "mutability": "mutable",
+                  "name": "_tokenB",
+                  "nameLocation": "144:7:24",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 26286,
+                  "src": "136:15:24",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_address",
+                    "typeString": "address"
+                  },
+                  "typeName": {
+                    "id": 26278,
+                    "name": "address",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "136:7:24",
+                    "stateMutability": "nonpayable",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address",
+                      "typeString": "address"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "118:34:24"
+            },
+            "returnParameters": {
+              "id": 26285,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 26282,
+                  "mutability": "mutable",
+                  "name": "",
+                  "nameLocation": "-1:-1:-1",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 26286,
+                  "src": "200:7:24",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 26281,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "200:7:24",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 26284,
+                  "mutability": "mutable",
+                  "name": "",
+                  "nameLocation": "-1:-1:-1",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 26286,
+                  "src": "209:7:24",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 26283,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "209:7:24",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "199:18:24"
+            },
+            "scope": 26287,
+            "stateMutability": "view",
+            "virtual": false,
+            "visibility": "external"
+          }
+        ],
+        "abstract": false,
+        "baseContracts": [],
+        "canonicalName": "IVanillaVault",
+        "contractDependencies": [],
+        "contractKind": "interface",
+        "fullyImplemented": false,
+        "linearizedBaseContracts": [
+          26287
+        ],
+        "name": "IVanillaVault",
+        "nameLocation": "75:13:24",
+        "scope": 26288,
+        "usedErrors": []
+      }
+    ],
+    "license": "UNLICENSED"
+  },
+  "id": 24
+}
