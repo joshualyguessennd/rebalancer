@@ -87,6 +87,7 @@ contract RebalancerTest is Test {
         console.log("new value of tokenA", new_valueA);
         console.log("new value of tokenB", new_valueB);
 
+
         // change ratio
         vm.prank(owner);
         rebalancer.setRatio(usdc, 8000);
