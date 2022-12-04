@@ -64,24 +64,28 @@ contract VanillaVault is Ownable, ERC20 {
     @param _token asset authorized 
     @param _amount amount of asset the user wish to deposit 
     */
-    function deposit(address _token, uint256 _amount) external {
+    function deposit(address _token, uint256 _amount)
+        external
+        returns (uint256, uint256)
+    {
         if (!isAllowedAsset[_token]) revert InvalidAsset();
-        // get the decimal of the ERC20
         uint256 tokenDecimals = ERC20(_token).decimals();
-        // transfer the token to the vault
+        uint256 depositValue = ((_amount / 10**tokenDecimals) *
+            getAssetPrice(_token)).div(10**8);
         IERC20(_token).transferFrom(msg.sender, address(this), _amount);
-        // issue the share of the vault
-        uint256 shares = _issueShares(_amount, tokenDecimals);
-        // todo update the user share of the specific asset
-        userShareAssets[msg.sender][_token] += shares;
-        // mint the shares
-        _mint(msg.sender, shares);
-        emit Deposit(msg.sender, _token, shares);
+        // get vault total value
+        uint256 mintAmount = _issueShares(depositValue);
+        _mint(msg.sender, mintAmount);
+        emit Deposit(msg.sender, _token, mintAmount);
+        address _token0 = token[0];
+        address _token1 = token[1];
+        uint256 totalVaultValue = getValueAssetInVault(_token0) +
+            getValueAssetInVault(_token1);
+        return (depositValue, totalVaultValue);
     }
 
     function withdraw(address _token, uint256 _shares) external {
         if (!isAllowedAsset[_token]) revert InvalidAsset();
-
         uint256 tokenDecimals = ERC20(_token).decimals();
         uint256 amount = _calcShares(_shares, tokenDecimals);
         if (_shares > userShareAssets[msg.sender][_token])
@@ -207,15 +211,25 @@ contract VanillaVault is Ownable, ERC20 {
     _issueShares function set a standard decimals for all the amount decimal,
     this shares will be use for the asset weight in the vault
     @param _amount, amount deposited to the vault
-    @param _decim, decimal of the asset the user has deposited
     @return shares value
     */
-    function _issueShares(uint256 _amount, uint256 _decim)
+    function _issueShares(uint256 _amount, address _token)
         internal
-        pure
+        view
         returns (uint256)
     {
-        uint256 amountToMint = _amount * 10**(_decimals - _decim);
+        address _token0 = token[0];
+        address _token1 = token[1];
+        uint256 amountToMint;
+        uint256 totalVaultValue = getValueAssetInVault(_token0) +
+            getValueAssetInVault(_token1);
+        if (totalSupply() == 0) {
+            amountToMint = (_amount * 10**decimals());
+        } else {
+            if (_token == _token0) {
+                amountToMint = (_amount * totalSupply()) / totalVaultValue;
+            }
+        }
         return amountToMint;
     }
 
