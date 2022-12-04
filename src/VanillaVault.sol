@@ -226,9 +226,7 @@ contract VanillaVault is Ownable, ERC20 {
         if (totalSupply() == 0) {
             amountToMint = (_amount * 10**decimals());
         } else {
-            if (_token == _token0) {
-                amountToMint = (_amount * totalSupply()) / totalVaultValue;
-            }
+            amountToMint = (_amount * totalSupply()) / totalVaultValue;
         }
         return amountToMint;
     }
