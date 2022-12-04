@@ -4,12 +4,14 @@ pragma solidity ^0.8.17;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
+import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "./interfaces/IVanillaVault.sol";
 
 // todo add logic for more pair
 // write the tests
 // add keeper
 contract Rebalancer is Ownable {
+    using SafeMath for uint256;
     // use uniswap v2
 
     address public immutable tokenA =
@@ -22,7 +24,7 @@ contract Rebalancer is Ownable {
 
     address public vault;
 
-    uint256 interval;
+    uint256 public interval;
 
     mapping(address => uint256) public targetRatio; // ratio tokens
 
@@ -30,12 +32,24 @@ contract Rebalancer is Ownable {
         vault = _vault;
     }
 
-    // set the ratio for the pair of token (we should optimize for N tokens)
+    /**
+     *@dev set the desire ratio to rebalance the vault
+     *@param _token token we want set the ratio
+     *@param _ratio desired ratio for the _token
+     */
     function setRatio(address _token, uint256 _ratio) public onlyOwner {
         targetRatio[_token] = _ratio;
+        if (_token == tokenA) {
+            targetRatio[tokenB] = 10000 - targetRatio[tokenA];
+        } else {
+            targetRatio[tokenA] = 10000 - targetRatio[tokenB];
+        }
     }
 
-    // function to set the interval the keep will call the rebalance function
+    /**
+     *@dev function to set the interval the keep will call the rebalance function
+     *@param _interval interval of time the rebalancer will rebalance the vault
+     */
     function setInverval(uint256 _interval) public onlyOwner {
         interval = _interval;
     }
@@ -54,21 +68,6 @@ contract Rebalancer is Ownable {
     }
 
     /**
-    @dev get the current ratio of weth and usd in the vault
-    for a contract that can take n token we need to set add more oracle price 
-    */
-    function _getVaultCurrentRatio() internal view returns (uint256, uint256) {
-        uint256 priceWeth = getLatestPrice(oraclePriceTokenB);
-        uint256 totalWeightWeth = IERC20(vault).balanceOf(tokenB) * priceWeth;
-        uint256 totalWeightUSD = IERC20(vault).balanceOf(tokenA);
-
-        uint256 ratioUSD = (totalWeightUSD /
-            (totalWeightUSD + totalWeightWeth)) * 10000;
-        uint256 ratioWeth = 10000 - ratioUSD;
-        return (ratioWeth, ratioUSD);
-    }
-
-    /**
      *@dev rebalance ratio of token A and tokenB in the vault
      * the function get the desired ratio for token A and token B
      * verify the current ratio in the vault and execute the swap following the outcome of the current ratio
@@ -76,23 +75,39 @@ contract Rebalancer is Ownable {
     function rebalance() external {
         uint256 tokenADesiredRatio = targetRatio[tokenA];
         uint256 tokenBDesiredRatio = targetRatio[tokenB];
-        (uint256 ratioB, uint256 ratioA) = _getVaultCurrentRatio();
+        (uint256 ratioA, uint256 ratioB) = IVanillaVault(vault)
+            .getVaultCurrentRatio(tokenA, tokenB);
+        uint256 valueTokenA = IVanillaVault(vault).getValueAssetInVault(tokenA);
+        uint256 valueTokenB = IVanillaVault(vault).getValueAssetInVault(tokenB);
+        uint256 totalVaultValue = valueTokenA + valueTokenB;
         address[] memory path;
         path = new address[](2);
         path[0] = tokenA;
         path[0] = tokenB;
-        // if token ratio is > desired ratio , compute the exceeds amount of token and swap it to the other token
         if (ratioA > tokenADesiredRatio) {
-            uint256 amountUSD = IERC20(tokenA).balanceOf(vault);
-            uint256 amountToSwap = ((tokenADesiredRatio - ratioA) * amountUSD) /
-                10000;
-            IVanillaVault(vault).executeSwap(tokenA, tokenB, amountToSwap);
+            uint256 amountUSDToSwap = valueTokenA.sub(
+                totalVaultValue.mul(tokenADesiredRatio).div(10**4)
+            );
+            uint256 amount = IVanillaVault(vault).getAmountOfByPrice(
+                tokenA,
+                amountUSDToSwap
+            );
+            IVanillaVault(vault).executeSwap(tokenA, tokenB, amount);
         } else if (ratioB > tokenBDesiredRatio) {
-            uint256 price = IERC20(tokenB).balanceOf(vault) *
-                getLatestPrice(oraclePriceTokenB);
-            uint256 amountToSwap = ((tokenBDesiredRatio - ratioB) * price) /
-                10000;
-            IVanillaVault(vault).executeSwap(tokenB, tokenA, amountToSwap);
+            uint256 amountUSDToSwap = valueTokenB.sub(
+                totalVaultValue.mul(tokenBDesiredRatio).div(10**4)
+            );
+            uint256 amount = IVanillaVault(vault).getAmountOfByPrice(
+                tokenB,
+                amountUSDToSwap
+            );
+            IVanillaVault(vault).executeSwap(tokenB, tokenA, amount);
         }
+    }
+
+    function getRatio() external view returns (uint256, uint256) {
+        uint256 ratioWETH = targetRatio[tokenB];
+        uint256 ratioUSD = targetRatio[tokenA];
+        return (ratioUSD, ratioWETH);
     }
 }

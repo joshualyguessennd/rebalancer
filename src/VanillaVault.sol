@@ -4,13 +4,17 @@ pragma solidity ^0.8.17;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@uniswapV2/contracts/interfaces/IUniswapV2Router02.sol";
+import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 
 // todo verify is the vault will work as curve vault where user can withraw the token he desires
 // reevaluate the test for the vault withdraw
 contract VanillaVault is Ownable, ERC20 {
+    using SafeMath for uint256;
     address public immutable router =
         0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D;
+    address public immutable usdc = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
     address public rebalancer;
     uint256 private immutable _decimals = 18;
     event Deposit(address indexed user, address token, uint256 amount);
@@ -18,7 +22,8 @@ contract VanillaVault is Ownable, ERC20 {
 
     mapping(address => bool) public isAllowedAsset;
     mapping(address => uint256) public assetWeight;
-    mapping(address => mapping(address => uint256)) userShareAssets;
+    mapping(address => mapping(address => uint256)) public userShareAssets;
+    mapping(address => address) public oracleAsset;
 
     error InvalidAsset();
     error InsufficientSharesBalance();
@@ -36,6 +41,10 @@ contract VanillaVault is Ownable, ERC20 {
 
     function setBalancer(address _rebalancer) external onlyOwner {
         rebalancer = _rebalancer;
+    }
+
+    function addOracle(address _asset, address _oracle) external onlyOwner {
+        oracleAsset[_asset] = _oracle;
     }
 
     /**
@@ -82,33 +91,91 @@ contract VanillaVault is Ownable, ERC20 {
     ) external {
         if (msg.sender != rebalancer) revert unauthorizedAccess();
         address[] memory path;
+        path = new address[](2);
         path[0] = _tokenIn;
         path[1] = _tokenOut;
+        uint256 expectedAmountOut = IUniswapV2Router02(router).getAmountsOut(
+            _amount,
+            path
+        )[1];
         uint256 deadline = block.timestamp;
+        IERC20(_tokenIn).approve(router, _amount);
         IUniswapV2Router02(router).swapExactTokensForTokens(
             _amount,
-            0,
+            expectedAmountOut,
             path,
             address(this),
             deadline
         );
     }
 
-    // /**
-    //  *@dev get the vault ratio of token A and tokenB, for this example we are logic for 2 assets
-    //  */
-    // function getVaultRatio(address _tokenA, address _tokenB)
-    //     public
-    //     view
-    //     returns (uint256, uint256)
-    // {
-    //     uint256 weigthAssetA = assetWeight[_tokenA];
-    //     uint256 weigthAssetB = assetWeight[_tokenB];
-    //     uint256 totalWeight = weigthAssetA + weigthAssetB;
-    //     uint256 ratioA = (weigthAssetA / totalWeight) * 10000;
-    //     uint256 ratioB = 10000 - ratioA;
-    //     return (ratioA, ratioB);
-    // }
+    /**
+    @dev get the current ratio of weth and usd in the vault
+    for a contract that can take n token we need to set add more oracle price
+    *@param _tokenA address of tokenA
+    *@param _tokenB address of token
+    *@return ratio of token A and ratio of token B, price of tokenA and price of tokenB    
+    */
+    function getVaultCurrentRatio(address _tokenA, address _tokenB)
+        public
+        view
+        returns (uint256, uint256)
+    {
+        uint256 priceTokenA = getAssetPrice(_tokenA);
+        uint256 priceTokenB = getAssetPrice(_tokenB);
+        uint256 decimalsA = ERC20(_tokenA).decimals();
+        uint256 decimmalsB = ERC20(_tokenB).decimals();
+        uint256 totalWeightA = IERC20(_tokenA)
+            .balanceOf(address(this))
+            .div(10**decimalsA)
+            .mul(priceTokenA)
+            .div(10**8);
+        uint256 totalWeightB = IERC20(_tokenB)
+            .balanceOf(address(this))
+            .div(10**decimmalsB)
+            .mul(priceTokenB)
+            .div(10**8);
+        uint256 ratioB = totalWeightB.mul(10000).div(
+            totalWeightA + totalWeightB
+        );
+        uint256 ratioA = totalWeightA.mul(10000).div(
+            totalWeightA + totalWeightB
+        );
+        return (ratioA, ratioB);
+    }
+
+    /**
+    @dev get the latest price of a token
+    @param _asset asset to get the price 
+    */
+    function getAssetPrice(address _asset) internal view returns (uint256) {
+        address _oracle = oracleAsset[_asset];
+        (, int256 price, , , ) = AggregatorV3Interface(_oracle)
+            .latestRoundData();
+        return uint256(price);
+    }
+
+    function getValueAssetInVault(address _asset)
+        public
+        view
+        returns (uint256)
+    {
+        uint256 decimal = ERC20(_asset).decimals();
+        uint256 balance = IERC20(_asset).balanceOf(address(this));
+        uint256 price = getAssetPrice(_asset);
+        return balance.mul(price).div(10**decimal).div(10**8);
+    }
+
+    function getAmountOfByPrice(address _asset, uint256 _valueUSD)
+        public
+        view
+        returns (uint256)
+    {
+        uint256 price = getAssetPrice(_asset);
+        uint256 decimal = ERC20(_asset).decimals();
+        uint256 amount = _valueUSD.mul(decimal).mul(10**8).div(price);
+        return amount;
+    }
 
     /**
     @dev issue the share after user deposits
