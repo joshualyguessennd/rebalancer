@@ -173,7 +173,7 @@ contract VanillaVault is Ownable, ERC20 {
     {
         uint256 price = getAssetPrice(_asset);
         uint256 decimal = ERC20(_asset).decimals();
-        uint256 amount = _valueUSD.mul(decimal).mul(10**8).div(price);
+        uint256 amount = _valueUSD.mul(10**decimal).mul(10**8).div(price);
         return amount;
     }
 

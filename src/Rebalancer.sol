@@ -85,18 +85,16 @@ contract Rebalancer is Ownable {
         path[0] = tokenA;
         path[0] = tokenB;
         if (ratioA > tokenADesiredRatio) {
-            uint256 amountUSDToSwap = valueTokenA.sub(
-                totalVaultValue.mul(tokenADesiredRatio).div(10**4)
-            );
+            uint256 amountA = (totalVaultValue * tokenADesiredRatio);
+            uint256 amountUSDToSwap = valueTokenA - amountA.div(10**4);
             uint256 amount = IVanillaVault(vault).getAmountOfByPrice(
                 tokenA,
                 amountUSDToSwap
             );
             IVanillaVault(vault).executeSwap(tokenA, tokenB, amount);
         } else if (ratioB > tokenBDesiredRatio) {
-            uint256 amountUSDToSwap = valueTokenB.sub(
-                totalVaultValue.mul(tokenBDesiredRatio).div(10**4)
-            );
+            uint256 amountA = (totalVaultValue * tokenBDesiredRatio);
+            uint256 amountUSDToSwap = valueTokenB - amountA.div(10**4);
             uint256 amount = IVanillaVault(vault).getAmountOfByPrice(
                 tokenB,
                 amountUSDToSwap
