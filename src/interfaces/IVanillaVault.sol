@@ -17,4 +17,8 @@ interface IVanillaVault {
         returns (uint256);
 
     function getValueAssetInVault(address _asset) external returns (uint256);
+
+    function isAllowedToken(address _asset) external returns (uint256);
+
+    function getToken(uint256 _index) external returns (address);
 }

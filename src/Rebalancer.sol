@@ -14,35 +14,28 @@ contract Rebalancer is Ownable {
     using SafeMath for uint256;
     // use uniswap v2
 
-    address public immutable tokenA =
-        0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48; // usdc
-    address public immutable tokenB =
-        0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2; // weth
-
-    address public immutable oraclePriceTokenB =
-        0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419; // oracle ETH // add more oracle for more tokens
-
     address public vault;
 
     uint256 public interval;
 
-    mapping(address => uint256) public targetRatio; // ratio tokens
+    mapping(uint256 => uint256) public targetRatio; // ratio tokens
 
     constructor(address _vault) {
         vault = _vault;
     }
 
     /**
-     *@dev set the desire ratio to rebalance the vault
-     *@param _token token we want set the ratio
+     *@dev set the desire ratio to rebalance the vault, vault has 2 tokens
+     *@param _index to set the ratio
      *@param _ratio desired ratio for the _token
      */
-    function setRatio(address _token, uint256 _ratio) public onlyOwner {
-        targetRatio[_token] = _ratio;
-        if (_token == tokenA) {
-            targetRatio[tokenB] = 10000 - targetRatio[tokenA];
+    function setRatio(uint256 _index, uint256 _ratio) public onlyOwner {
+        require(_index < 2, "invalid index");
+        targetRatio[_index] = _ratio;
+        if (_index == 0) {
+            targetRatio[1] = 10000 - targetRatio[0];
         } else {
-            targetRatio[tokenA] = 10000 - targetRatio[tokenB];
+            targetRatio[0] = 10000 - targetRatio[1];
         }
     }
 
@@ -55,26 +48,15 @@ contract Rebalancer is Ownable {
     }
 
     /**
-     * Returns the latest price
-     */
-    function getLatestPrice(address _oracle_address)
-        internal
-        view
-        returns (uint256)
-    {
-        (, int256 price, , , ) = AggregatorV3Interface(_oracle_address)
-            .latestRoundData();
-        return uint256(price);
-    }
-
-    /**
      *@dev rebalance ratio of token A and tokenB in the vault
      * the function get the desired ratio for token A and token B
      * verify the current ratio in the vault and execute the swap following the outcome of the current ratio
      */
     function rebalance() external {
-        uint256 tokenADesiredRatio = targetRatio[tokenA];
-        uint256 tokenBDesiredRatio = targetRatio[tokenB];
+        address tokenA = IVanillaVault(vault).getToken(0);
+        address tokenB = IVanillaVault(vault).getToken(1);
+        uint256 tokenADesiredRatio = targetRatio[0];
+        uint256 tokenBDesiredRatio = targetRatio[1];
         (uint256 ratioA, uint256 ratioB) = IVanillaVault(vault)
             .getVaultCurrentRatio(tokenA, tokenB);
         uint256 valueTokenA = IVanillaVault(vault).getValueAssetInVault(tokenA);
@@ -104,8 +86,8 @@ contract Rebalancer is Ownable {
     }
 
     function getRatio() external view returns (uint256, uint256) {
-        uint256 ratioWETH = targetRatio[tokenB];
-        uint256 ratioUSD = targetRatio[tokenA];
-        return (ratioUSD, ratioWETH);
+        uint256 ratioToken1 = targetRatio[1];
+        uint256 ratioToken0 = targetRatio[0];
+        return (ratioToken0, ratioToken1);
     }
 }

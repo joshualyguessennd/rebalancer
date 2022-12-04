@@ -17,10 +17,12 @@ contract VanillaVault is Ownable, ERC20 {
     address public immutable usdc = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
     address public rebalancer;
     uint256 private immutable _decimals = 18;
+    uint256 private index = 1;
     event Deposit(address indexed user, address token, uint256 amount);
     event Withdrawn(address indexed user, address token, uint256 amount);
 
     mapping(address => bool) public isAllowedAsset;
+    mapping(uint256 => address) public token;
     mapping(address => uint256) public assetWeight;
     mapping(address => mapping(address => uint256)) public userShareAssets;
     mapping(address => address) public oracleAsset;
@@ -28,17 +30,27 @@ contract VanillaVault is Ownable, ERC20 {
     error InvalidAsset();
     error InsufficientSharesBalance();
     error unauthorizedAccess();
+    error MaxTokenCount();
 
     constructor() ERC20("VanillaVault", "VV") {}
 
-    function addNewERC20(address _token) external onlyOwner {
+    function addNewERC20(uint256 _index, address _token) external onlyOwner {
+        if (_index > index) revert MaxTokenCount();
         isAllowedAsset[_token] = true;
+        token[_index] = _token;
     }
 
-    function removeERC20(address _token) external onlyOwner {
-        isAllowedAsset[_token] = false;
+    /**
+     *@dev get address of tokens in the vault
+     *@param _index index to get the token address
+     */
+    function getToken(uint256 _index) public view returns (address) {
+        return token[_index];
     }
 
+    /**
+     *@dev set balancer address for the vault
+     */
     function setBalancer(address _rebalancer) external onlyOwner {
         rebalancer = _rebalancer;
     }
@@ -83,6 +95,9 @@ contract VanillaVault is Ownable, ERC20 {
     /**
      *@dev execute swap to rebalance the ratio of tokenA and tokenB
      * executeSwap function is only callable by rebalancer contract
+     *@param _tokenIn token we want to swap
+     *@param _tokenOut token to receive back
+     *@param _amount amount of tokenOut to receive
      */
     function executeSwap(
         address _tokenIn,
@@ -142,6 +157,15 @@ contract VanillaVault is Ownable, ERC20 {
             totalWeightA + totalWeightB
         );
         return (ratioA, ratioB);
+    }
+
+    /**
+     *@dev function to verify if the token is allowed or not in the vault
+     *@param _asset token to verify allowance
+     *@return boolean
+     */
+    function isAllowedToken(address _asset) public view returns (bool) {
+        return isAllowedAsset[_asset];
     }
 
     /**

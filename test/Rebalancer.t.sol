@@ -27,11 +27,11 @@ contract RebalancerTest is Test {
 
     function test_setter() public {
         vm.expectRevert();
-        rebalancer.setRatio(weth, 6000);
+        rebalancer.setRatio(1, 6000);
         vm.expectRevert();
         rebalancer.setInverval(6000);
         vm.startPrank(owner);
-        rebalancer.setRatio(weth, 5000);
+        rebalancer.setRatio(1, 5000);
         (uint256 RatioUSD, uint256 RatioWETH) = rebalancer.getRatio();
         assertEq(RatioWETH, 5000);
         assertEq(RatioUSD, 5000);
@@ -43,9 +43,9 @@ contract RebalancerTest is Test {
         vm.startPrank(owner);
         vault.addOracle(weth, oracleWETH);
         vault.addOracle(usdc, oracleUSDC);
-        vault.addNewERC20(usdc);
-        vault.addNewERC20(weth);
-        rebalancer.setRatio(usdc, 5000);
+        vault.addNewERC20(0, usdc);
+        vault.addNewERC20(1, weth);
+        rebalancer.setRatio(0, 5000);
         vm.stopPrank();
         vm.startPrank(user);
         IERC20(usdc).approve(address(vault), 200000e6);
@@ -87,10 +87,9 @@ contract RebalancerTest is Test {
         console.log("new value of tokenA", new_valueA);
         console.log("new value of tokenB", new_valueB);
 
-
         // change ratio
         vm.prank(owner);
-        rebalancer.setRatio(usdc, 8000);
+        rebalancer.setRatio(0, 8000);
 
         rebalancer.rebalance();
         new_valueA = vault.getValueAssetInVault(usdc);

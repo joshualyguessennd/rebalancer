@@ -47,8 +47,8 @@ contract VaultTest is Test {
 
     function _depositToVault(uint256 amountUSDC, uint256 amountWETH) public {
         vm.startPrank(owner);
-        vault.addNewERC20(usdc);
-        vault.addNewERC20(weth);
+        vault.addNewERC20(0, usdc);
+        vault.addNewERC20(1, weth);
         vm.stopPrank();
         vm.startPrank(user);
         IERC20(usdc).approve(address(vault), 100e6);
