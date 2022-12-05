@@ -84,8 +84,8 @@ contract VanillaVault is Ownable, ERC20 {
         IERC20(_token).transferFrom(msg.sender, address(this), _amount);
         // get vault total value
         uint256 mintAmount = _issueShares(depositValue);
-        sharesForTokens[msg.sender][_token] += mintAmount;
         _mint(msg.sender, mintAmount);
+        sharesForTokens[msg.sender][_token] += mintAmount;
         emit Deposit(msg.sender, _token, _amount);
         return mintAmount;
     }

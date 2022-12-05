@@ -43,6 +43,32 @@ contract VaultTest is Test {
         console.log(userVaultBalance);
     }
 
+    function test_deposit_withdraw_fuzz(uint256 a) public {
+        vm.assume(a != 1);
+        _depositToVault(100e6);
+        assertEq(IERC20(usdc).balanceOf(address(vault)), 100e6);
+        vm.prank(user);
+        uint256 shares = vault.getSharesForToken(usdc);
+        vm.prank(user);
+        vault.withdraw(usdc, shares);
+        assertEq(IERC20(usdc).balanceOf(address(vault)), 0);
+        // deposit two tokens
+
+        _depositToVault(20000e6);
+        vm.startPrank(user);
+        IERC20(weth).approve(address(vault), 100e18);
+        vault.deposit(weth, 100e18);
+        shares = vault.getSharesForToken(usdc);
+        uint256 sharesweth = vault.getSharesForToken(weth);
+        assertEq(IERC20(usdc).balanceOf(address(vault)), 20000e6);
+        assertEq(IERC20(weth).balanceOf(address(vault)), 100e18);
+        vault.withdraw(usdc, shares);
+        vault.withdraw(weth, sharesweth);
+        assertEq(IERC20(usdc).balanceOf(address(vault)), 0);
+        assertEq(IERC20(weth).balanceOf(address(vault)), 0);
+        vm.stopPrank();
+    }
+
     function test_getToken() public {
         vm.startPrank(owner);
         vault.addNewERC20(0, usdc);
