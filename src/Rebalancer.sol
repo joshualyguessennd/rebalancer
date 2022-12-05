@@ -7,18 +7,17 @@ import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "./interfaces/IVanillaVault.sol";
 
-// todo add logic for more pair
-// write the tests
-// add keeper
 contract Rebalancer is Ownable {
     using SafeMath for uint256;
-    // use uniswap v2
 
     address public vault;
 
     uint256 public interval;
+    uint256 public lastRebalance;
 
     mapping(uint256 => uint256) public targetRatio; // ratio tokens
+
+    error TimeRequirementNotMeet();
 
     constructor(address _vault) {
         vault = _vault;
@@ -53,6 +52,8 @@ contract Rebalancer is Ownable {
      * verify the current ratio in the vault and execute the swap following the outcome of the current ratio
      */
     function rebalance() external {
+        if (lastRebalance + interval > block.timestamp)
+            revert TimeRequirementNotMeet();
         address tokenA = IVanillaVault(vault).getToken(0);
         address tokenB = IVanillaVault(vault).getToken(1);
         uint256 tokenADesiredRatio = targetRatio[0];
@@ -83,8 +84,12 @@ contract Rebalancer is Ownable {
             );
             IVanillaVault(vault).executeSwap(tokenB, tokenA, amount);
         }
+        lastRebalance = block.timestamp;
     }
 
+    /**
+    @dev get the ratio desired for the tokens 
+    */
     function getRatio() external view returns (uint256, uint256) {
         uint256 ratioToken1 = targetRatio[1];
         uint256 ratioToken0 = targetRatio[0];

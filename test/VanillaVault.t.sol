@@ -34,20 +34,23 @@ contract VaultTest is Test {
         // assertEq(IERC20(weth).balanceOf(address(vault)), 100e18);
         assertEq(IERC20(usdc).balanceOf(address(vault)), 100e6);
         console.log(userVaultBalance);
-        // assertEq(IERC20(address(vault)).balanceOf(user), 200e18);
     }
 
-    // function test_withdraw() public {
-    //     _depositToVault(100e6, 100e18);
-    //     // withdraw
-    //     vm.startPrank(user);
-    //     vault.withdraw(usdc, 100e18);
-    //     // withdraw amount > amountDeposited
-    //     vm.expectRevert(InsufficientSharesBalance.selector);
-    //     vault.withdraw(usdc, 100e18);
-    //     // verify is balance usdc of vault is empty
-    //     assertEq(IERC20(usdc).balanceOf(address(vault)), 0);
-    // }
+    function test_withdraw() public {
+        _depositToVault(100e6, 100e18);
+        uint256 balancestart = IERC20(usdc).balanceOf(user);
+        console.log("balance start", balancestart);
+        // withdraw
+        vm.startPrank(user);
+        vault.withdraw(usdc, balancestart);
+        uint256 balance = IERC20(usdc).balanceOf(user);
+        console.log("balance end", balance);
+        // withdraw amount > amountDeposited
+        // vm.expectRevert(InsufficientSharesBalance.selector);
+        // vault.withdraw(usdc, 100);
+        // verify is balance usdc of vault is empty
+        // assertEq(IERC20(usdc).balanceOf(address(vault)), 0);
+    }
 
     function _depositToVault(uint256 amountUSDC, uint256 amountWETH) public {
         vm.startPrank(owner);
@@ -58,17 +61,11 @@ contract VaultTest is Test {
         vm.stopPrank();
         vm.startPrank(user);
         IERC20(usdc).approve(address(vault), 100e6);
-        (uint256 valueUSD, uint256 totalValue1) = vault.deposit(
-            usdc,
-            amountUSDC
-        );
-        console.log("value usd", valueUSD, totalValue1);
+        vault.deposit(usdc, amountUSDC);
+
         IERC20(weth).approve(address(vault), amountWETH);
-        (uint256 valueWETH, uint256 totalValue2) = vault.deposit(
-            weth,
-            amountWETH
-        );
-        console.log("value weth", valueWETH, totalValue2);
+        vault.deposit(weth, amountWETH);
+
         vm.stopPrank();
     }
 }

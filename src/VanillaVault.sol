@@ -15,6 +15,7 @@ contract VanillaVault is Ownable, ERC20 {
     address public immutable router =
         0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D;
     address public immutable usdc = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
+    address public immutable weth = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     address public rebalancer;
     uint256 private immutable _decimals = 18;
     uint256 private index = 1;
@@ -64,10 +65,7 @@ contract VanillaVault is Ownable, ERC20 {
     @param _token asset authorized 
     @param _amount amount of asset the user wish to deposit 
     */
-    function deposit(address _token, uint256 _amount)
-        external
-        returns (uint256, uint256)
-    {
+    function deposit(address _token, uint256 _amount) external {
         if (!isAllowedAsset[_token]) revert InvalidAsset();
         uint256 tokenDecimals = ERC20(_token).decimals();
         uint256 depositValue = ((_amount / 10**tokenDecimals) *
@@ -76,22 +74,22 @@ contract VanillaVault is Ownable, ERC20 {
         // get vault total value
         uint256 mintAmount = _issueShares(depositValue);
         _mint(msg.sender, mintAmount);
-        emit Deposit(msg.sender, _token, mintAmount);
-        address _token0 = token[0];
-        address _token1 = token[1];
-        uint256 totalVaultValue = getValueAssetInVault(_token0) +
-            getValueAssetInVault(_token1);
-        return (depositValue, totalVaultValue);
+        emit Deposit(msg.sender, _token, _amount);
     }
 
+    /**
+     *@notice withdraw token using the shares the users have
+     *@param _token token to withdraw
+     *@param _shares to burn
+     */
     function withdraw(address _token, uint256 _shares) external {
         if (!isAllowedAsset[_token]) revert InvalidAsset();
-        uint256 tokenDecimals = ERC20(_token).decimals();
-        uint256 amount = _calcShares(_shares, tokenDecimals);
-        if (_shares > userShareAssets[msg.sender][_token])
-            revert InsufficientSharesBalance();
+        // uint256 tokenDecimals = ERC20(_token).decimals();
+        uint256 amount = _calcShares(_shares, _token);
+        // if (_shares > userShareAssets[msg.sender][_token])
+        //     revert InsufficientSharesBalance();
         _burn(msg.sender, _shares);
-        userShareAssets[msg.sender][_token] -= _shares;
+        // userShareAssets[msg.sender][_token] -= _shares;
         IERC20(_token).transfer(msg.sender, amount);
         emit Withdrawn(msg.sender, _token, amount);
     }
@@ -109,23 +107,40 @@ contract VanillaVault is Ownable, ERC20 {
         uint256 _amount
     ) external {
         if (msg.sender != rebalancer) revert unauthorizedAccess();
-        address[] memory path;
-        path = new address[](2);
-        path[0] = _tokenIn;
-        path[1] = _tokenOut;
-        uint256 expectedAmountOut = IUniswapV2Router02(router).getAmountsOut(
-            _amount,
-            path
-        )[1];
-        uint256 deadline = block.timestamp;
-        IERC20(_tokenIn).approve(router, _amount);
-        IUniswapV2Router02(router).swapExactTokensForTokens(
-            _amount,
-            expectedAmountOut,
-            path,
-            address(this),
-            deadline
-        );
+        if (_tokenIn == weth || _tokenOut == weth) {
+            address[] memory path;
+            path = new address[](2);
+            path[0] = _tokenIn;
+            path[1] = _tokenOut;
+            uint256 expectedAmountOut = IUniswapV2Router02(router)
+                .getAmountsOut(_amount, path)[1];
+            uint256 deadline = block.timestamp;
+            IERC20(_tokenIn).approve(router, _amount);
+            IUniswapV2Router02(router).swapExactTokensForTokens(
+                _amount,
+                expectedAmountOut,
+                path,
+                address(this),
+                deadline
+            );
+        } else {
+            address[] memory path;
+            path = new address[](3);
+            path[0] = _tokenIn;
+            path[1] = weth;
+            path[2] = _tokenOut;
+            uint256 expectedAmountOut = IUniswapV2Router02(router)
+                .getAmountsOut(_amount, path)[2];
+            uint256 deadline = block.timestamp;
+            IERC20(_tokenIn).approve(router, _amount);
+            IUniswapV2Router02(router).swapExactTokensForTokens(
+                _amount,
+                expectedAmountOut,
+                path,
+                address(this),
+                deadline
+            );
+        }
     }
 
     /**
@@ -183,6 +198,10 @@ contract VanillaVault is Ownable, ERC20 {
         return uint256(price);
     }
 
+    /**
+     *@dev get total value USD of aset in a vault
+     *@param _asset asset to get the value in USD
+     */
     function getValueAssetInVault(address _asset)
         public
         view
@@ -194,6 +213,11 @@ contract VanillaVault is Ownable, ERC20 {
         return balance.mul(price).div(10**decimal).div(10**8);
     }
 
+    /**
+     *@dev determine the amount of token corresponding a value in USD
+     *@param _asset asset address we want to determine the amount
+     *@param _valueUSD value of USD to determine the amount of token
+     */
     function getAmountOfByPrice(address _asset, uint256 _valueUSD)
         public
         view
@@ -213,11 +237,7 @@ contract VanillaVault is Ownable, ERC20 {
     @param _amount, amount deposited to the vault
     @return shares value
     */
-    function _issueShares(uint256 _amount, address _token)
-        internal
-        view
-        returns (uint256)
-    {
+    function _issueShares(uint256 _amount) internal view returns (uint256) {
         address _token0 = token[0];
         address _token1 = token[1];
         uint256 amountToMint;
@@ -231,13 +251,21 @@ contract VanillaVault is Ownable, ERC20 {
         return amountToMint;
     }
 
-    function _calcShares(uint256 _shares, uint256 _decim)
+    /**
+     *@dev calculate the token amount corresponding the value
+     *@param _shares shares to get the amount
+     *@param _token to withdraw
+     */
+    function _calcShares(uint256 _shares, address _token)
         internal
-        pure
+        view
         returns (uint256)
     {
-        uint256 decimal = _decimals - _decim;
-        uint256 amount = _shares / 10**decimal;
-        return amount;
+        address _token0 = token[0];
+        address _token1 = token[1];
+        uint256 decimal = ERC20(_token).decimals();
+        uint256 totalVaultValue = getValueAssetInVault(_token0) +
+            getValueAssetInVault(_token1);
+        return (_shares * totalVaultValue) / totalSupply();
     }
 }

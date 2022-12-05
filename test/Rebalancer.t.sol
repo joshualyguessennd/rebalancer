@@ -91,6 +91,10 @@ contract RebalancerTest is Test {
         vm.prank(owner);
         rebalancer.setRatio(0, 8000);
 
+        //set interval
+        vm.prank(owner);
+        rebalancer.setInverval(3600);
+        vm.expectRevert();
         rebalancer.rebalance();
         new_valueA = vault.getValueAssetInVault(usdc);
         new_valueB = vault.getValueAssetInVault(weth);
