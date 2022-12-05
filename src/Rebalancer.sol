@@ -54,19 +54,20 @@ contract Rebalancer is Ownable {
     function rebalance() external {
         if (lastRebalance + interval > block.timestamp)
             revert TimeRequirementNotMeet();
+        // get the two assets present in the vault
         address tokenA = IVanillaVault(vault).getToken(0);
         address tokenB = IVanillaVault(vault).getToken(1);
+        // get the desired token ratio
         uint256 tokenADesiredRatio = targetRatio[0];
         uint256 tokenBDesiredRatio = targetRatio[1];
+        // get the ratio present of the vault
         (uint256 ratioA, uint256 ratioB) = IVanillaVault(vault)
             .getVaultCurrentRatio(tokenA, tokenB);
+        // get the value asset in the vault
         uint256 valueTokenA = IVanillaVault(vault).getValueAssetInVault(tokenA);
         uint256 valueTokenB = IVanillaVault(vault).getValueAssetInVault(tokenB);
         uint256 totalVaultValue = valueTokenA + valueTokenB;
-        address[] memory path;
-        path = new address[](2);
-        path[0] = tokenA;
-        path[0] = tokenB;
+        // verify the ratio and rebalance when necessary
         if (ratioA > tokenADesiredRatio) {
             uint256 amountA = (totalVaultValue * tokenADesiredRatio);
             uint256 amountUSDToSwap = valueTokenA - amountA.div(10**4);
@@ -84,6 +85,7 @@ contract Rebalancer is Ownable {
             );
             IVanillaVault(vault).executeSwap(tokenB, tokenA, amount);
         }
+        // update last rebalance for interval verification
         lastRebalance = block.timestamp;
     }
 

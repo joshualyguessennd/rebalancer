@@ -4,6 +4,7 @@ pragma solidity ^0.8.13;
 import "forge-std/Test.sol";
 import "../src/VanillaVault.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 contract VaultTest is Test {
     address public weth = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
@@ -20,7 +21,7 @@ contract VaultTest is Test {
     function setUp() public {
         vm.prank(owner);
         vault = new VanillaVault();
-        deal(usdc, user, 1000e6);
+        deal(usdc, user, 100200e6);
         deal(weth, user, 1000e18);
     }
 
@@ -29,30 +30,32 @@ contract VaultTest is Test {
         IERC20(usdc).approve(address(vault), 100e6);
         vm.expectRevert(InvalidAsset.selector);
         vault.deposit(usdc, 100e6);
-        _depositToVault(100e6, 100e18);
+        _depositToVault(100e6);
         uint256 userVaultBalance = IERC20(vault).balanceOf(user);
-        // assertEq(IERC20(weth).balanceOf(address(vault)), 100e18);
         assertEq(IERC20(usdc).balanceOf(address(vault)), 100e6);
         console.log(userVaultBalance);
     }
 
     function test_withdraw() public {
-        _depositToVault(100e6, 100e18);
-        uint256 balancestart = IERC20(usdc).balanceOf(user);
-        console.log("balance start", balancestart);
-        // withdraw
-        vm.startPrank(user);
-        vault.withdraw(usdc, balancestart);
-        uint256 balance = IERC20(usdc).balanceOf(user);
-        console.log("balance end", balance);
-        // withdraw amount > amountDeposited
-        // vm.expectRevert(InsufficientSharesBalance.selector);
-        // vault.withdraw(usdc, 100);
-        // verify is balance usdc of vault is empty
-        // assertEq(IERC20(usdc).balanceOf(address(vault)), 0);
+        uint256 balanceUserBefore = IERC20(usdc).balanceOf(user);
+        _depositToVault(100e6);
+        uint256 vaultValueBefore = vault.getValueAssetInVault(usdc);
+        assertEq(vaultValueBefore, 100); // should be equal to 100 USD
+        uint256 balanceShare = IERC20(address(vault)).balanceOf(user);
+        vm.prank(user);
+        vault.withdraw(usdc, balanceShare);
+        uint256 balanceUSDVault = IERC20(usdc).balanceOf(address(vault));
+        uint256 balanceUserAfter = IERC20(usdc).balanceOf(user);
+        console.log(balanceUSDVault);
+        uint256 vaultValueAfter = vault.getValueAssetInVault(usdc);
+        assertEq(vaultValueAfter, 0);
+        // we have some dust because of the chainlink price exponentiel
+        assert(balanceUserBefore - balanceUserAfter < 10**2);
+        vm.expectRevert();
+        vault.withdraw(usdc, balanceShare);
     }
 
-    function _depositToVault(uint256 amountUSDC, uint256 amountWETH) public {
+    function _depositToVault(uint256 amountUSDC) public {
         vm.startPrank(owner);
         vault.addNewERC20(0, usdc);
         vault.addNewERC20(1, weth);
@@ -60,12 +63,8 @@ contract VaultTest is Test {
         vault.addOracle(weth, oracleWETH);
         vm.stopPrank();
         vm.startPrank(user);
-        IERC20(usdc).approve(address(vault), 100e6);
+        IERC20(usdc).approve(address(vault), amountUSDC);
         vault.deposit(usdc, amountUSDC);
-
-        IERC20(weth).approve(address(vault), amountWETH);
-        vault.deposit(weth, amountWETH);
-
         vm.stopPrank();
     }
 }

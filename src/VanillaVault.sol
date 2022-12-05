@@ -24,17 +24,22 @@ contract VanillaVault is Ownable, ERC20 {
 
     mapping(address => bool) public isAllowedAsset;
     mapping(uint256 => address) public token;
-    mapping(address => uint256) public assetWeight;
-    mapping(address => mapping(address => uint256)) public userShareAssets;
     mapping(address => address) public oracleAsset;
+    mapping(address => mapping(address => uint256)) public sharesForTokens;
 
     error InvalidAsset();
     error InsufficientSharesBalance();
+    error InsufficientBalance();
     error unauthorizedAccess();
     error MaxTokenCount();
 
     constructor() ERC20("VanillaVault", "VV") {}
 
+    /**
+     *@dev add new token to the vault of 2 assets
+     *@param _index to position the assets
+     *@param _token asset address
+     */
     function addNewERC20(uint256 _index, address _token) external onlyOwner {
         if (_index > index) revert MaxTokenCount();
         isAllowedAsset[_token] = true;
@@ -51,11 +56,17 @@ contract VanillaVault is Ownable, ERC20 {
 
     /**
      *@dev set balancer address for the vault
+     *@param  _rebalancer, rebalancer contract address
      */
     function setBalancer(address _rebalancer) external onlyOwner {
         rebalancer = _rebalancer;
     }
 
+    /**
+     *@dev add oracle for a token
+     *@param _asset asset to add oracle
+     *@param _oracle chainlink oracle address
+     */
     function addOracle(address _asset, address _oracle) external onlyOwner {
         oracleAsset[_asset] = _oracle;
     }
@@ -68,11 +79,13 @@ contract VanillaVault is Ownable, ERC20 {
     function deposit(address _token, uint256 _amount) external {
         if (!isAllowedAsset[_token]) revert InvalidAsset();
         uint256 tokenDecimals = ERC20(_token).decimals();
+        // usd value of the asset
         uint256 depositValue = ((_amount / 10**tokenDecimals) *
             getAssetPrice(_token)).div(10**8);
         IERC20(_token).transferFrom(msg.sender, address(this), _amount);
         // get vault total value
         uint256 mintAmount = _issueShares(depositValue);
+        sharesForTokens[msg.sender][_token] += mintAmount;
         _mint(msg.sender, mintAmount);
         emit Deposit(msg.sender, _token, _amount);
     }
@@ -84,14 +97,27 @@ contract VanillaVault is Ownable, ERC20 {
      */
     function withdraw(address _token, uint256 _shares) external {
         if (!isAllowedAsset[_token]) revert InvalidAsset();
+        if (sharesForTokens[msg.sender][_token] < _shares)
+            revert InsufficientSharesBalance();
         // uint256 tokenDecimals = ERC20(_token).decimals();
-        uint256 amount = _calcShares(_shares, _token);
-        // if (_shares > userShareAssets[msg.sender][_token])
-        //     revert InsufficientSharesBalance();
+        uint256 shares = _calcShares(_shares);
+        uint256 decimal = ERC20(_token).decimals();
+        sharesForTokens[msg.sender][_token] -= _shares;
         _burn(msg.sender, _shares);
-        // userShareAssets[msg.sender][_token] -= _shares;
-        IERC20(_token).transfer(msg.sender, amount);
-        emit Withdrawn(msg.sender, _token, amount);
+        uint256 amountInUSD = shares.div(10**18).mul(10**decimal);
+        // get amount corresponding the price
+        // vault is subject to some dusts because of price exponent
+        uint256 amountAsset = getAmountOfByPrice(
+            _token,
+            amountInUSD.div(10**decimal)
+        );
+        // verify if user have enough amount of funds in the vault
+
+        if (IERC20(_token).balanceOf(address(this)) < amountAsset)
+            revert InsufficientBalance();
+        // transfer the token
+        IERC20(_token).transfer(msg.sender, amountAsset);
+        emit Withdrawn(msg.sender, _token, amountAsset);
     }
 
     /**
@@ -238,34 +264,33 @@ contract VanillaVault is Ownable, ERC20 {
     @return shares value
     */
     function _issueShares(uint256 _amount) internal view returns (uint256) {
-        address _token0 = token[0];
-        address _token1 = token[1];
-        uint256 amountToMint;
-        uint256 totalVaultValue = getValueAssetInVault(_token0) +
-            getValueAssetInVault(_token1);
-        if (totalSupply() == 0) {
-            amountToMint = (_amount * 10**decimals());
+        uint256 amountUpdate = _amount * 10**decimals();
+        if (totalSupply() > 0) {
+            return (amountUpdate * totalSupply()) / totalAsset();
         } else {
-            amountToMint = (_amount * totalSupply()) / totalVaultValue;
+            return amountUpdate;
         }
-        return amountToMint;
     }
+
+    function getSharesForToken(address _token)
+        external
+        view
+        returns (uint256)
+    {}
 
     /**
      *@dev calculate the token amount corresponding the value
      *@param _shares shares to get the amount
-     *@param _token to withdraw
      */
-    function _calcShares(uint256 _shares, address _token)
-        internal
-        view
-        returns (uint256)
-    {
-        address _token0 = token[0];
-        address _token1 = token[1];
-        uint256 decimal = ERC20(_token).decimals();
-        uint256 totalVaultValue = getValueAssetInVault(_token0) +
-            getValueAssetInVault(_token1);
-        return (_shares * totalVaultValue) / totalSupply();
+    function _calcShares(uint256 _shares) internal view returns (uint256) {
+        return (_shares * totalAsset()) / totalSupply();
+    }
+
+    function totalAsset() public view returns (uint256) {
+        address token0 = token[0];
+        address token1 = token[1];
+        uint256 valueToken0 = getValueAssetInVault(token0);
+        uint256 valueToken1 = getValueAssetInVault(token1);
+        return (valueToken0 + valueToken1) * 10**decimals();
     }
 }
