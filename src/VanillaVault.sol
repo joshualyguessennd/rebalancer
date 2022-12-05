@@ -12,10 +12,8 @@ import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 contract VanillaVault is Ownable, ERC20 {
     address public immutable router =
         0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D;
-    address public immutable usdc = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
     address public immutable weth = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     address public rebalancer;
-    uint256 private immutable _decimals = 18;
     uint256 private index = 1;
     event Deposit(address indexed user, address token, uint256 amount);
     event Withdrawn(address indexed user, address token, uint256 amount);

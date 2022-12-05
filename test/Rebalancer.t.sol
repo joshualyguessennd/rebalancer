@@ -97,8 +97,8 @@ contract RebalancerTest is Test {
         console.log("new ratio of tokenA", new_ratioA);
         console.log("new ratio of tokenB", new_ratioB);
         // ratio has some dust due to price of and chainlink price exponent
-        assert(new_ratioA - 5000 <= 3);
-        assert(5000 - new_ratioB <= 3);
+        assert(new_ratioA - 5000 <= 100);
+        assert(5000 - new_ratioB <= 100);
         // test keeper
         vm.prank(user);
         vm.expectRevert(NotKeeper.selector);
@@ -115,6 +115,9 @@ contract RebalancerTest is Test {
         rebalancer.setRatio(0, 8000);
         vm.warp(block.timestamp + 86400);
         rebalancer.rebalance();
+        uint256 getNextime = rebalancer.getNexMinTime();
+        console.log(getNextime);
+        assert(block.timestamp + rebalancer.interval() <= getNextime);
         (new_ratioA, new_ratioB) = vault.getVaultCurrentRatio(usdc, weth);
         console.log("new ratio of tokenA", new_ratioA);
         console.log("new ratio of tokenB", new_ratioB);

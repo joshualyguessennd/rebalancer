@@ -43,6 +43,14 @@ contract VaultTest is Test {
         console.log(userVaultBalance);
     }
 
+    function test_getToken() public {
+        vm.startPrank(owner);
+        vault.addNewERC20(0, usdc);
+        vault.addNewERC20(1, weth);
+        assertEq(usdc, vault.getToken(0));
+        assertEq(weth, vault.getToken(1));
+    }
+
     function test_withdraw() public {
         uint256 balanceUserBefore = IERC20(usdc).balanceOf(user);
         _depositToVault(100e6);
