@@ -5,6 +5,9 @@ on:
       - main
   pull_request:
 
+env:
+  INFURA : ${{secrets.INFURA}}
+
 jobs:
   tests:
     runs-on: ubuntu-latest
@@ -21,8 +24,6 @@ jobs:
         run: |
           forge config
           forge test -f $INFURA --gas-report --root .
-        env:
-          INFURA : ${{secrets.INFURA}}
 
       - name: Run Coverage
         run: |
