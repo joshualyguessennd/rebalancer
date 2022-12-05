@@ -8,6 +8,7 @@ import "./interfaces/IVanillaVault.sol";
 
 contract Rebalancer is Ownable {
     address public vault;
+    address public keeper;
 
     uint256 public interval;
     uint256 public lastRebalance;
@@ -33,6 +34,14 @@ contract Rebalancer is Ownable {
         } else {
             targetRatio[0] = 10000 - targetRatio[1];
         }
+    }
+
+    /**
+     *@dev set keeper address, keeper is a chainlink bot like to automate task on the blockchain
+     *@param _keeper address of keeper
+     */
+    function setKeeper(address _keeper) public onlyOwner {
+        keeper = _keeper;
     }
 
     /**
@@ -84,6 +93,10 @@ contract Rebalancer is Ownable {
         }
         // update last rebalance for interval verification
         lastRebalance = block.timestamp;
+    }
+
+    function getNexMinTime() external view returns (uint256) {
+        return lastRebalance + interval;
     }
 
     /**
