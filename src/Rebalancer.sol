@@ -4,12 +4,9 @@ pragma solidity ^0.8.17;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "./interfaces/IVanillaVault.sol";
 
 contract Rebalancer is Ownable {
-    using SafeMath for uint256;
-
     address public vault;
 
     uint256 public interval;
@@ -70,7 +67,7 @@ contract Rebalancer is Ownable {
         // verify the ratio and rebalance when necessary
         if (ratioA > tokenADesiredRatio) {
             uint256 amountA = (totalVaultValue * tokenADesiredRatio);
-            uint256 amountUSDToSwap = valueTokenA - amountA.div(10**4);
+            uint256 amountUSDToSwap = valueTokenA - amountA / 10**4;
             uint256 amount = IVanillaVault(vault).getAmountOfByPrice(
                 tokenA,
                 amountUSDToSwap
@@ -78,7 +75,7 @@ contract Rebalancer is Ownable {
             IVanillaVault(vault).executeSwap(tokenA, tokenB, amount);
         } else if (ratioB > tokenBDesiredRatio) {
             uint256 amountA = (totalVaultValue * tokenBDesiredRatio);
-            uint256 amountUSDToSwap = valueTokenB - amountA.div(10**4);
+            uint256 amountUSDToSwap = valueTokenB - amountA / 10**4;
             uint256 amount = IVanillaVault(vault).getAmountOfByPrice(
                 tokenB,
                 amountUSDToSwap

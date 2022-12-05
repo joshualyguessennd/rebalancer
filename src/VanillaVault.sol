@@ -4,14 +4,12 @@ pragma solidity ^0.8.17;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@uniswapV2/contracts/interfaces/IUniswapV2Router02.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 
 // todo verify is the vault will work as curve vault where user can withraw the token he desires
 // reevaluate the test for the vault withdraw
 contract VanillaVault is Ownable, ERC20 {
-    using SafeMath for uint256;
     address public immutable router =
         0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D;
     address public immutable usdc = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
@@ -81,7 +79,7 @@ contract VanillaVault is Ownable, ERC20 {
         uint256 tokenDecimals = ERC20(_token).decimals();
         // usd value of the asset
         uint256 depositValue = ((_amount / 10**tokenDecimals) *
-            getAssetPrice(_token)).div(10**8);
+            getAssetPrice(_token)) / 10**8;
         IERC20(_token).transferFrom(msg.sender, address(this), _amount);
         // get vault total value
         uint256 mintAmount = _issueShares(depositValue);
@@ -104,12 +102,12 @@ contract VanillaVault is Ownable, ERC20 {
         uint256 decimal = ERC20(_token).decimals();
         sharesForTokens[msg.sender][_token] -= _shares;
         _burn(msg.sender, _shares);
-        uint256 amountInUSD = shares.div(10**18).mul(10**decimal);
+        uint256 amountInUSD = (shares / 10**18) * 10**decimal;
         // get amount corresponding the price
         // vault is subject to some dusts because of price exponent
         uint256 amountAsset = getAmountOfByPrice(
             _token,
-            amountInUSD.div(10**decimal)
+            amountInUSD / 10**decimal
         );
         // verify if user have enough amount of funds in the vault
 
@@ -185,22 +183,12 @@ contract VanillaVault is Ownable, ERC20 {
         uint256 priceTokenB = getAssetPrice(_tokenB);
         uint256 decimalsA = ERC20(_tokenA).decimals();
         uint256 decimmalsB = ERC20(_tokenB).decimals();
-        uint256 totalWeightA = IERC20(_tokenA)
-            .balanceOf(address(this))
-            .div(10**decimalsA)
-            .mul(priceTokenA)
-            .div(10**8);
-        uint256 totalWeightB = IERC20(_tokenB)
-            .balanceOf(address(this))
-            .div(10**decimmalsB)
-            .mul(priceTokenB)
-            .div(10**8);
-        uint256 ratioB = totalWeightB.mul(10000).div(
-            totalWeightA + totalWeightB
-        );
-        uint256 ratioA = totalWeightA.mul(10000).div(
-            totalWeightA + totalWeightB
-        );
+        uint256 totalWeightA = ((IERC20(_tokenA).balanceOf(address(this)) /
+            10**decimalsA) * priceTokenA) / 10**8;
+        uint256 totalWeightB = ((IERC20(_tokenB).balanceOf(address(this)) /
+            10**decimmalsB) * priceTokenB) / 10**8;
+        uint256 ratioB = (totalWeightB * 10000) / (totalWeightA + totalWeightB);
+        uint256 ratioA = (totalWeightA * 10000) / (totalWeightA + totalWeightB);
         return (ratioA, ratioB);
     }
 
@@ -236,7 +224,7 @@ contract VanillaVault is Ownable, ERC20 {
         uint256 decimal = ERC20(_asset).decimals();
         uint256 balance = IERC20(_asset).balanceOf(address(this));
         uint256 price = getAssetPrice(_asset);
-        return balance.mul(price).div(10**decimal).div(10**8);
+        return (balance * price) / 10**(decimal + 8);
     }
 
     /**
@@ -251,7 +239,7 @@ contract VanillaVault is Ownable, ERC20 {
     {
         uint256 price = getAssetPrice(_asset);
         uint256 decimal = ERC20(_asset).decimals();
-        uint256 amount = _valueUSD.mul(10**decimal).mul(10**8).div(price);
+        uint256 amount = (_valueUSD * 10**(decimal + 8)) / price;
         return amount;
     }
 
