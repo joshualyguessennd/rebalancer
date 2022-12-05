@@ -16,15 +16,27 @@ contract RebalancerTest is Test {
     VanillaVault vault;
     Rebalancer rebalancer;
 
+    error TimeRequirementNotMeet();
+    error NotKeeper();
+    error InvalidAsset();
+    error InsufficientSharesBalance();
+    error InsufficientBalance();
+    error unauthorizedAccess();
+    error MaxTokenCount();
+
     function setUp() public {
         vm.startPrank(owner);
         vault = new VanillaVault();
         rebalancer = new Rebalancer(address(vault));
+        rebalancer.setKeeper(owner);
         vm.stopPrank();
         deal(usdc, user, 200000e6);
         deal(weth, user, 1000e18);
     }
 
+    /**
+    test setter function 
+    */
     function test_setter() public {
         vm.expectRevert();
         rebalancer.setRatio(1, 6000);
@@ -39,6 +51,9 @@ contract RebalancerTest is Test {
         assertEq(rebalancer.interval(), 5000);
     }
 
+    /**
+    test balancer function 
+    */
     function test_balancer() public {
         vm.startPrank(owner);
         vault.addOracle(weth, oracleWETH);
@@ -68,37 +83,41 @@ contract RebalancerTest is Test {
         console.log("ratio of tokenA", ratioA);
         console.log("ratio of tokenB", ratioB);
         assert(ratioA > ratioB);
-
-        // test rebalance
-        vm.expectRevert();
+        // unauthorized access to vault swap
+        vm.startPrank(owner);
+        vm.expectRevert(unauthorizedAccess.selector);
         rebalancer.rebalance();
-        vm.prank(owner);
         vault.setBalancer(address(rebalancer));
         rebalancer.rebalance();
+        vm.stopPrank();
         (uint256 new_ratioA, uint256 new_ratioB) = vault.getVaultCurrentRatio(
             usdc,
             weth
         );
         console.log("new ratio of tokenA", new_ratioA);
         console.log("new ratio of tokenB", new_ratioB);
+        // ratio has some dust due to price of and chainlink price exponent
+        assert(new_ratioA - 5000 <= 3);
+        assert(5000 - new_ratioB <= 3);
+        // test keeper
+        vm.prank(user);
+        vm.expectRevert(NotKeeper.selector);
+        rebalancer.rebalance();
 
-        uint256 new_valueA = vault.getValueAssetInVault(usdc);
-        uint256 new_valueB = vault.getValueAssetInVault(weth);
-        console.log("new value of tokenA", new_valueA);
-        console.log("new value of tokenB", new_valueB);
+        vm.startPrank(owner);
+        rebalancer.setInverval(86400);
+        vm.expectRevert(TimeRequirementNotMeet.selector);
+        rebalancer.rebalance();
+        vm.stopPrank();
 
         // change ratio
-        vm.prank(owner);
+        vm.startPrank(owner);
         rebalancer.setRatio(0, 8000);
-
-        //set interval
-        vm.prank(owner);
-        rebalancer.setInverval(3600);
-        vm.expectRevert();
+        vm.warp(block.timestamp + 86400);
         rebalancer.rebalance();
-        new_valueA = vault.getValueAssetInVault(usdc);
-        new_valueB = vault.getValueAssetInVault(weth);
-        console.log("new value of tokenA", new_valueA);
-        console.log("new value of tokenB", new_valueB);
+        (new_ratioA, new_ratioB) = vault.getVaultCurrentRatio(usdc, weth);
+        console.log("new ratio of tokenA", new_ratioA);
+        console.log("new ratio of tokenB", new_ratioB);
+        vm.stopPrank();
     }
 }

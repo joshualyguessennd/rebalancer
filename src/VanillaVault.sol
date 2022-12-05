@@ -74,7 +74,10 @@ contract VanillaVault is Ownable, ERC20 {
     @param _token asset authorized 
     @param _amount amount of asset the user wish to deposit 
     */
-    function deposit(address _token, uint256 _amount) external {
+    function deposit(address _token, uint256 _amount)
+        external
+        returns (uint256)
+    {
         if (!isAllowedAsset[_token]) revert InvalidAsset();
         uint256 tokenDecimals = ERC20(_token).decimals();
         // usd value of the asset
@@ -86,6 +89,7 @@ contract VanillaVault is Ownable, ERC20 {
         sharesForTokens[msg.sender][_token] += mintAmount;
         _mint(msg.sender, mintAmount);
         emit Deposit(msg.sender, _token, _amount);
+        return mintAmount;
     }
 
     /**
@@ -109,10 +113,11 @@ contract VanillaVault is Ownable, ERC20 {
             _token,
             amountInUSD / 10**decimal
         );
-        // verify if user have enough amount of funds in the vault
-
+        // verify if user have enough amount of funds in the vaul
+        // the vault could rebalance and the asset amount could be inferior to what the user deposit
+        // sends amount if the shares value is > to the vault amount
         if (IERC20(_token).balanceOf(address(this)) < amountAsset)
-            revert InsufficientBalance();
+            amountAsset = IERC20(_token).balanceOf(address(this));
         // transfer the token
         IERC20(_token).transfer(msg.sender, amountAsset);
         emit Withdrawn(msg.sender, _token, amountAsset);
@@ -260,11 +265,12 @@ contract VanillaVault is Ownable, ERC20 {
         }
     }
 
-    function getSharesForToken(address _token)
-        external
-        view
-        returns (uint256)
-    {}
+    /**
+     *@dev function to return the shares a user have for a particular asset
+     */
+    function getSharesForToken(address _token) external view returns (uint256) {
+        return sharesForTokens[msg.sender][_token];
+    }
 
     /**
      *@dev calculate the token amount corresponding the value
@@ -274,6 +280,9 @@ contract VanillaVault is Ownable, ERC20 {
         return (_shares * totalAsset()) / totalSupply();
     }
 
+    /**
+    determine the total usd value of the assets contains in the vault 
+    */
     function totalAsset() public view returns (uint256) {
         address token0 = token[0];
         address token1 = token[1];

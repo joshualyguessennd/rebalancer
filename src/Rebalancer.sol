@@ -16,6 +16,7 @@ contract Rebalancer is Ownable {
     mapping(uint256 => uint256) public targetRatio; // ratio tokens
 
     error TimeRequirementNotMeet();
+    error NotKeeper();
 
     constructor(address _vault) {
         vault = _vault;
@@ -58,6 +59,7 @@ contract Rebalancer is Ownable {
      * verify the current ratio in the vault and execute the swap following the outcome of the current ratio
      */
     function rebalance() external {
+        if (msg.sender != keeper) revert NotKeeper();
         if (lastRebalance + interval > block.timestamp)
             revert TimeRequirementNotMeet();
         // get the two assets present in the vault
