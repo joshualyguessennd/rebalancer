@@ -1,0 +1,92 @@
+name: Solidity
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+env:
+  INFURA : ${{secrets.INFURA}}
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+      - name: Install Foundry
+        uses: onbjerg/foundry-toolchain@v1
+        with:
+          version: nightly
+      - run: pwd
+      - name: Run tests
+        run: |
+          forge config
+          forge test -f $INFURA --gas-report --root .
+
+      - name: Run Coverage
+        run: |
+          forge coverage  -f $INFURA --report lcov
+
+      # - name: Upload coverage to Codecov
+      #   uses: codecov/codecov-action@v3
+      #   with:
+      #     directory: .
+      #     env_vars: OS,PYTHON
+      #     fail_ci_if_error: true
+      #     files: ./lcov.info
+      #     name: realioververse-coverage
+      #     verbose: true
+
+  analyze:
+      runs-on: ubuntu-latest
+      steps:
+        - uses: actions/checkout@v3
+          with:
+            submodules: recursive
+
+        - name: Install Foundry
+          uses: onbjerg/foundry-toolchain@v1
+          with:
+            version: nightly
+
+        - name: Install dependencies
+          run: forge install
+          
+        - name: Run Slither core
+          uses: crytic/slither-action@main
+          continue-on-error: true
+          id: slither
+          with:
+            target: "contracts/src"
+            slither-config: "slither.config.json"
+            solc-version: 0.8.15
+            sarif: results.sarif
+
+        - name: Upload SARIF file for core
+          uses: github/codeql-action/upload-sarif@v2
+          id: upload-1
+          with:
+            sarif_file: ${{ steps.slither.outputs.sarif }}
+
+  bindings:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: recursive
+
+      - name: Install Foundry
+        uses: onbjerg/foundry-toolchain@v1
+        with:
+          version: nightly
+
+      - name: Pull library deps
+        run: forge update
+
+      - name: Build contracts before checking bindings are correct
+        run: forge build  
+
+      - name: Check bindings are correct
+        run: forge bind --bindings-path ./bindings --crate-name bindings
