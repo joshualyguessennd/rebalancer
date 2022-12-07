@@ -62,7 +62,7 @@ contract KeeperManager is Ownable {
 
     /**
      *@dev call the rebalancer contract via chainlink performKeepUp
-     *@param checkData data provide 0x
+     *@param performData data provide 0x
      */
     function performUpkeep(bytes calldata performData) external {
         if (msg.sender != registryContract) revert UnauthorizedRight();
