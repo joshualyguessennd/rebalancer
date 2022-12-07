@@ -175,12 +175,13 @@ contract VanillaVault is Ownable, ERC20 {
     for a contract that can take n token we need to set add more oracle price
     *@param _tokenA address of tokenA
     *@param _tokenB address of token
-    *@return ratio of token A and ratio of token B, price of tokenA and price of tokenB    
+    *@return ratioA ratio of tokenA 
+    *@return ratioB ratio of tokenB
     */
     function getVaultCurrentRatio(address _tokenA, address _tokenB)
         public
         view
-        returns (uint256, uint256)
+        returns (uint256 ratioA, uint256 ratioB)
     {
         uint256 priceTokenA = getAssetPrice(_tokenA);
         uint256 priceTokenB = getAssetPrice(_tokenB);
@@ -190,8 +191,11 @@ contract VanillaVault is Ownable, ERC20 {
             10**decimalsA) * priceTokenA) / 10**8;
         uint256 totalWeightB = ((IERC20(_tokenB).balanceOf(address(this)) /
             10**decimmalsB) * priceTokenB) / 10**8;
-        uint256 ratioB = (totalWeightB * 10000) / (totalWeightA + totalWeightB);
-        uint256 ratioA = (totalWeightA * 10000) / (totalWeightA + totalWeightB);
+        unchecked {
+            ratioA = (totalWeightA * 10000) / (totalWeightA + totalWeightB);
+            ratioB = 10000 - ratioA;
+        }
+
         return (ratioA, ratioB);
     }
 
@@ -218,16 +222,19 @@ contract VanillaVault is Ownable, ERC20 {
     /**
      *@dev get total value USD of aset in a vault
      *@param _asset asset to get the value in USD
+     *@return value value of asset in the vault
      */
     function getValueAssetInVault(address _asset)
         public
         view
-        returns (uint256)
+        returns (uint256 value)
     {
         uint256 decimal = ERC20(_asset).decimals();
         uint256 balance = IERC20(_asset).balanceOf(address(this));
         uint256 price = getAssetPrice(_asset);
-        return (balance * price) / 10**(decimal + 8);
+        unchecked {
+            value = (balance * price) / 10**(decimal + 8);
+        }
     }
 
     /**
@@ -238,12 +245,13 @@ contract VanillaVault is Ownable, ERC20 {
     function getAmountOfByPrice(address _asset, uint256 _valueUSD)
         public
         view
-        returns (uint256)
+        returns (uint256 amount)
     {
         uint256 price = getAssetPrice(_asset);
         uint256 decimal = ERC20(_asset).decimals();
-        uint256 amount = (_valueUSD * 10**(decimal + 8)) / price;
-        return amount;
+        unchecked {
+            amount = (_valueUSD * 10**(decimal + 8)) / price;
+        }
     }
 
     /**
@@ -281,11 +289,13 @@ contract VanillaVault is Ownable, ERC20 {
     /**
     determine the total usd value of the assets contains in the vault 
     */
-    function totalAsset() public view returns (uint256) {
+    function totalAsset() public view returns (uint256 totalAssets) {
         address token0 = token[0];
         address token1 = token[1];
         uint256 valueToken0 = getValueAssetInVault(token0);
         uint256 valueToken1 = getValueAssetInVault(token1);
-        return (valueToken0 + valueToken1) * 10**decimals();
+        unchecked {
+            totalAssets = (valueToken0 + valueToken1) * 10**decimals();
+        }
     }
 }

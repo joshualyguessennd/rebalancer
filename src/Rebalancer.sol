@@ -62,6 +62,7 @@ contract Rebalancer is Ownable {
         if (msg.sender != keeper) revert NotKeeper();
         if (lastRebalance + interval > block.timestamp)
             revert TimeRequirementNotMeet();
+        uint256 totalVaultValue;
         // get the two assets present in the vault
         address tokenA = IVanillaVault(vault).getToken(0);
         address tokenB = IVanillaVault(vault).getToken(1);
@@ -74,7 +75,9 @@ contract Rebalancer is Ownable {
         // get the value asset in the vault
         uint256 valueTokenA = IVanillaVault(vault).getValueAssetInVault(tokenA);
         uint256 valueTokenB = IVanillaVault(vault).getValueAssetInVault(tokenB);
-        uint256 totalVaultValue = valueTokenA + valueTokenB;
+        unchecked {
+            totalVaultValue = valueTokenA + valueTokenB;
+        }
         // verify the ratio and rebalance when necessary
         if (ratioA > tokenADesiredRatio) {
             uint256 amountA = (totalVaultValue * tokenADesiredRatio);

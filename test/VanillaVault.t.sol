@@ -14,6 +14,9 @@ contract VaultTest is Test {
     address public oracleUSDC = 0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6;
     address public owner = address(12);
     address public user = address(13);
+
+    mapping(address => address) public oracleAsset;
+
     VanillaVault vault;
     Rebalancer rebalancer;
 
@@ -30,6 +33,8 @@ contract VaultTest is Test {
         vm.stopPrank();
         deal(usdc, user, 100200e6);
         deal(weth, user, 1000e18);
+        oracleAsset[usdc] = oracleUSDC;
+        oracleAsset[weth] = oracleWETH;
     }
 
     function test_deposit() public {
@@ -47,24 +52,31 @@ contract VaultTest is Test {
         vm.assume(a != 1);
         _depositToVault(100e6);
         assertEq(IERC20(usdc).balanceOf(address(vault)), 100e6);
-        vm.prank(user);
-        uint256 shares = vault.getSharesForToken(usdc);
-        vm.prank(user);
-        vault.withdraw(usdc, shares);
-        assertEq(IERC20(usdc).balanceOf(address(vault)), 0);
+        console.log("deposit", IERC20(usdc).balanceOf(address(vault)));
+        vm.startPrank(user);
+        uint256 balanceShares = vault.getSharesForToken(usdc);
+        console.log("shares", balanceShares);
+        vault.withdraw(usdc, balanceShares);
+        // add decimals for dust
+        assertEq(IERC20(usdc).balanceOf(address(vault)) / 10**6, 0);
         // deposit two tokens
+        vm.stopPrank();
 
         _depositToVault(20000e6);
         vm.startPrank(user);
         IERC20(weth).approve(address(vault), 100e18);
         vault.deposit(weth, 100e18);
-        shares = vault.getSharesForToken(usdc);
+        uint256 shares = vault.getSharesForToken(usdc);
         uint256 sharesweth = vault.getSharesForToken(weth);
-        assertEq(IERC20(usdc).balanceOf(address(vault)), 20000e6);
+        // take in count dust for the last deposit
+        assertEq(
+            IERC20(usdc).balanceOf(address(vault)) / 10**6,
+            20000e6 / 10**6
+        );
         assertEq(IERC20(weth).balanceOf(address(vault)), 100e18);
         vault.withdraw(usdc, shares);
         vault.withdraw(weth, sharesweth);
-        assertEq(IERC20(usdc).balanceOf(address(vault)), 0);
+        assertEq(IERC20(usdc).balanceOf(address(vault)) / 10**6, 0);
         // dust on price due to price 10**8 div
         assert(IERC20(weth).balanceOf(address(vault)) < 10**16);
         vm.stopPrank();
@@ -78,13 +90,17 @@ contract VaultTest is Test {
         assertEq(weth, vault.getToken(1));
     }
 
-    function test_withdraw() public {
+    function test_withdraw_default() public {
         uint256 balanceUserBefore = IERC20(usdc).balanceOf(user);
         _depositToVault(100e6);
         uint256 vaultValueBefore = vault.getValueAssetInVault(usdc);
-        assertEq(vaultValueBefore, 100); // should be equal to 100 USD
-        uint256 balanceShare = IERC20(address(vault)).balanceOf(user);
-        vm.prank(user);
+        uint256 price = getAssetPrice(usdc);
+        uint256 balanceVault = IERC20(usdc).balanceOf(address(vault));
+        uint256 value = ((balanceVault / 10**6) * price) / 10**8;
+        assertEq(vaultValueBefore, value); // should be equal to 100 USD
+        vm.startPrank(user);
+        uint256 balanceShare = vault.getSharesForToken(usdc);
+        console.log("les balances shares", balanceShare);
         vault.withdraw(usdc, balanceShare);
         uint256 balanceUSDVault = IERC20(usdc).balanceOf(address(vault));
         uint256 balanceUserAfter = IERC20(usdc).balanceOf(user);
@@ -92,9 +108,11 @@ contract VaultTest is Test {
         uint256 vaultValueAfter = vault.getValueAssetInVault(usdc);
         assertEq(vaultValueAfter, 0);
         // we have some dust because of the chainlink price exponentiel
-        assert(balanceUserBefore - balanceUserAfter < 10**2);
+        assert((balanceUserBefore - balanceUserAfter) / 10**6 < 10);
+        console.log(balanceUserBefore, balanceUserAfter);
         vm.expectRevert();
         vault.withdraw(usdc, balanceShare);
+        vm.stopPrank();
     }
 
     /**
@@ -104,10 +122,14 @@ contract VaultTest is Test {
         _depositToVault(50000e6);
         console.log("usdc shares", vault.getSharesForToken(usdc));
         uint256 vaultValueBefore = vault.getValueAssetInVault(usdc);
-        assertEq(vaultValueBefore, 50000); // should be equal to 100 USD
+        uint256 price = getAssetPrice(usdc);
+        uint256 balanceVault = IERC20(usdc).balanceOf(address(vault));
+        uint256 value = ((balanceVault / 10**6) * price) / 10**8;
+        assertEq(vaultValueBefore, value); // should be equal to 100 USD
         vm.startPrank(user);
         IERC20(weth).approve(address(vault), 100e18);
         vault.deposit(weth, 100e18);
+        // get value price
         IERC20(usdc).approve(address(vault), 50000e6);
         vault.deposit(usdc, 50000e6);
         // get the different shares
@@ -164,5 +186,12 @@ contract VaultTest is Test {
         uint256 amount = vault.deposit(usdc, amountUSDC);
         console.log("deposit mint", amount);
         vm.stopPrank();
+    }
+
+    function getAssetPrice(address _asset) internal view returns (uint256) {
+        address _oracle = oracleAsset[_asset];
+        (, int256 price, , , ) = AggregatorV3Interface(_oracle)
+            .latestRoundData();
+        return uint256(price);
     }
 }
