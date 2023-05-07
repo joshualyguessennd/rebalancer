@@ -32,7 +32,7 @@ contract VanillaVault is Ownable, ERC20 {
     constructor() ERC20("VanillaVault", "VV") {}
 
     /**
-     *@dev add new token to the vault of 2 assets
+     *@dev add new token to the vault of 2 assets o
      *@param _index to position the assets
      *@param _token asset address
      */
