@@ -82,7 +82,7 @@ contract RebalancerTest is Test {
         );
         console.log("ratio of tokenA", ratioA);
         console.log("ratio of tokenB", ratioB);
-        assert(ratioA > ratioB);
+        assertLt(ratioA, ratioB);
         // unauthorized access to vault swap
         vm.startPrank(owner);
         vm.expectRevert(unauthorizedAccess.selector);
@@ -110,7 +110,7 @@ contract RebalancerTest is Test {
         rebalancer.rebalance();
         vm.stopPrank();
 
-        // change ratio
+        // update ratio
         vm.startPrank(owner);
         rebalancer.setRatio(0, 8000);
         vm.warp(block.timestamp + 86400);
