@@ -17,7 +17,7 @@ contract Rebalancer is Ownable {
     error TimeRequirementNotMeet();
     error NotKeeper();
 
-    constructor(address _vault) {
+    constructor(address _vault) Ownable(msg.sender) {
         vault = _vault;
     }
 

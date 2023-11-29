@@ -5,7 +5,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@uniswapV2/contracts/interfaces/IUniswapV2Router02.sol";
-import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
+import "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 
 // todo verify is the vault will work as curve vault where user can withraw the token he desires
 // reevaluate the test for the vault withdraw
@@ -29,7 +29,7 @@ contract VanillaVault is Ownable, ERC20 {
     error unauthorizedAccess();
     error MaxTokenCount();
 
-    constructor() ERC20("VanillaVault", "VV") {}
+    constructor() ERC20("VanillaVault", "VV") Ownable(msg.sender) {}
 
     /**
      *@dev add new token to the vault of 2 assets o

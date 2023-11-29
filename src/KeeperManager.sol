@@ -15,6 +15,8 @@ contract KeeperManager is Ownable {
     event CoolDownSet(uint256 cooldown);
     event RegistryContractSet(address indexed registryContract);
 
+    constructor() Ownable(msg.sender) {}
+
     /**
      *@dev initialize the keeper contract
      *@param _coolDown cooldown period where the keeper will execute performKeepUp
